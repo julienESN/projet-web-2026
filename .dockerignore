@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/coverage
+**/.DS_Store
+**/.turbo
+**/.vite
+**/.next
+**/*.log
+.git
+.github
+.cursor
+terminals
+
