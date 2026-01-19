@@ -1,0 +1,13 @@
+{
+    "name": "projet-web-2026-root",
+    "private": true,
+    "scripts": {
+        "setup": "npm run docker:clean && npm run docker:dev && echo 'Attente du démarrage...' && sleep 5 && npm run db:migrate",
+        "docker:dev": "docker compose up -d --build --remove-orphans",
+        "docker:clean": "docker compose down -v --remove-orphans",
+        "docker:stop": "docker compose stop",
+        "db:migrate": "docker compose exec backend npx prisma migrate deploy",
+        "db:seed": "docker compose exec backend npx prisma db seed",
+        "db:studio": "echo 'Ouvrez http://localhost:5555' && docker compose exec backend npx prisma studio"
+    }
+}

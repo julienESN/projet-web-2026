@@ -35,6 +35,8 @@ ENV PORT=3000
 COPY package/backend/package.json package/backend/package-lock.json ./
 COPY --from=build /app/package/backend/dist ./dist
 COPY --from=deps /build/package/backend/node_modules ./node_modules
+COPY --from=build /app/package/backend/prisma ./prisma
+COPY --from=build /app/package/backend/prisma.config.ts ./prisma.config.ts
 
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

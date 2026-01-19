@@ -50,14 +50,30 @@ Bienvenue sur le dépôt de notre projet web 2026. Cette application a pour but 
 
 ### Lancer le projet
 
-```bash
-# Cloner le dépôt
-git clone https://github.com/julienESN/projet-web-2026.git
-cd projet-web-2026
+La méthode la plus simple pour démarrer le projet de zéro (Clean install) :
 
-# Lancer l'environnement avec Docker (front + back)
-docker compose up --build
+```bash
+# Installation et démarrage complet (Nettoyage + Build + Migrations)
+npm run setup
 ```
+
+Ou étape par étape :
+
+```bash
+# 1. Nettoyer l'environnement (supprime conteneurs et volumes)
+npm run docker:clean
+
+# 2. Lancer les conteneurs (en arrière-plan)
+npm run docker:dev
+
+# 3. Appliquer les migrations de base de données
+npm run db:migrate
+```
+
+L'application sera accessible sur :
+*   Frontend : http://localhost:4173
+*   Backend API : http://localhost:3000
+*   Base de données : localhost:5432
 
 ## 🤝 Bonnes Pratiques de Collaboration
 

@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../../../docs/database-schema.svg"
+  theme    = "forest"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// MODÈLES PRINCIPAUX
+// ============================================
+
+/// Utilisateurs de l'application
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  resources   Resource[]
+  categories  Category[]
+  tags        Tag[]
+  collections Collection[]
+
+  @@map("users")
+}
+
+/// Types de ressources disponibles
+enum ResourceType {
+  link
+  document
+  contact
+  event
+  note
+}
+
+/// Ressources de l'utilisateur (liens, documents, contacts, événements, notes)
+model Resource {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  type        ResourceType
+  content     Json         // Structure flexible selon le type
+  isFavorite  Boolean      @default(false) @map("is_favorite")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String?   @map("category_id")
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Many-to-many avec Tags
+  tags ResourceTag[]
+
+  // Many-to-many avec Collections
+  collections CollectionResource[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([categoryId])
+  @@index([isFavorite])
+  @@index([createdAt(sort: Desc)])
+  @@map("resources")
+}
+
+/// Catégories personnalisées pour organiser les ressources
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  color     String?  // Couleur hex (#RRGGBB)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  userId    String     @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resources Resource[]
+
+  // Un utilisateur ne peut pas avoir deux catégories avec le même nom
+  @@unique([userId, name])
+  @@map("categories")
+}
+
+/// Tags pour la classification transversale
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   // Normalisé en lowercase
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  userId    String        @map("user_id")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resources ResourceTag[]
+
+  // Un utilisateur ne peut pas avoir deux tags identiques
+  @@unique([userId, name])
+  @@index([name])
+  @@map("tags")
+}
+
+/// Table de liaison Resource <-> Tag (many-to-many)
+model ResourceTag {
+  resourceId String   @map("resource_id")
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  tagId      String   @map("tag_id")
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([resourceId, tagId])
+  @@index([resourceId])
+  @@index([tagId])
+  @@map("resource_tags")
+}
+
+// ============================================
+// MODÈLES OPTIONNELS (MVP+)
+// ============================================
+
+/// Collections pour regrouper des ressources thématiquement
+model Collection {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  userId    String               @map("user_id")
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resources CollectionResource[]
+
+  @@unique([userId, name])
+  @@map("collections")
+}
+
+/// Table de liaison Collection <-> Resource (many-to-many)
+model CollectionResource {
+  collectionId String     @map("collection_id")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  resourceId   String     @map("resource_id")
+  resource     Resource   @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, resourceId])
+  @@map("collection_resources")
+}
