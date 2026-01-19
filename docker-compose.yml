@@ -1,25 +1,65 @@
 services:
+  # ===========================================
+  # BASE DE DONNÉES POSTGRESQL
+  # ===========================================
+  database:
+    image: postgres:16-alpine
+    container_name: projet-web-database
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-projet_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-projet_password}
+      POSTGRES_DB: ${POSTGRES_DB:-projet_web_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-projet_user} -d ${POSTGRES_DB:-projet_web_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # BACKEND NODE.JS + PRISMA
+  # ===========================================
   backend:
     build:
       context: .
       dockerfile: package/backend/Dockerfile
     container_name: projet-web-backend
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-projet_user}:${POSTGRES_PASSWORD:-projet_password}@database:5432/${POSTGRES_DB:-projet_web_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+    depends_on:
+      database:
+        condition: service_healthy
 
+  # ===========================================
+  # FRONTEND REACT/VITE
+  # ===========================================
   frontend:
     build:
       context: .
       dockerfile: package/frontend/Dockerfile
     container_name: projet-web-frontend
+    restart: unless-stopped
     ports:
       - "4173:4173"
     environment:
       NODE_ENV: production
-      # À utiliser côté front : import.meta.env.VITE_API_BASE_URL
       VITE_API_BASE_URL: http://localhost:3000
     depends_on:
       - backend
+
+# ===========================================
+# VOLUMES PERSISTANTS
+# ===========================================
+volumes:
+  postgres_data:
+    name: projet-web-postgres-data
