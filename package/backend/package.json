@@ -24,6 +24,7 @@
     "@nestjs/core": "^11.1.12",
     "@nestjs/platform-express": "^11.1.12",
     "contracts": "file:../../lib/contracts",
+    "zod": "^4.3.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
