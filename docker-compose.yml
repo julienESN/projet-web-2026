@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: projet-web-db
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: package/backend/Dockerfile
+    container_name: projet-web-backend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # À brancher côté NestJS quand vous ajoutez Prisma/TypeORM/etc.
+      DATABASE_URL: postgres://app:app@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: package/frontend/Dockerfile
+    container_name: projet-web-frontend
+    ports:
+      - "4173:4173"
+    environment:
+      NODE_ENV: production
+      # À utiliser côté front : import.meta.env.VITE_API_BASE_URL
+      VITE_API_BASE_URL: http://localhost:3000
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+
