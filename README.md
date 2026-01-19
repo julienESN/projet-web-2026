@@ -55,7 +55,7 @@ Bienvenue sur le dépôt de notre projet web 2026. Cette application a pour but 
 git clone https://github.com/julienESN/projet-web-2026.git
 cd projet-web-2026
 
-# Lancer l'environnement avec Docker (front + back + base de données)
+# Lancer l'environnement avec Docker (front + back)
 docker compose up --build
 ```
 
