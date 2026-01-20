@@ -1,1 +1,2 @@
-export { LoginDto, RegisterDto, LoginDtoSchema, RegisterDtoSchema } from './auth/login';
+export * from './auth/responses';
+export * from './auth/login';
