@@ -32,6 +32,16 @@ Bienvenue sur le dépôt de notre projet web 2026. Cette application a pour but 
 *   **Base de Données** : [PostgreSQL](https://www.postgresql.org/)
 *   **DevOps** : [Docker](https://www.docker.com/), [GitHub Actions](https://github.com/features/actions)
 
+## ⚠️ Architecture & Typage (IMPORTANT)
+
+Ce projet utilise une architecture **Monorepo** avec un partage strict des types via le dossier `lib/contracts`.
+
+*   **⛔️ INTERDIT** : De définir des types ou interfaces TypeScript pour les DTOs ou entités API directement dans le `backend` ou le `frontend`.
+*   **✅ OBLIGATOIRE** : Tous les contrats d'interface (Request/Response DTOs) doivent être définis dans `lib/contracts` en utilisant **Zod**.
+*   Le Frontend et le Backend importent ces types depuis le package `contracts`.
+
+👉 **Voir la documentation complète : [lib/contracts/README.md](./lib/contracts/README.md)**
+
 ## 📅 Planning (5 Jours)
 
 | Jour | Matin (9h10 - 12h40) | Après-midi (13h40 - 17h10) |
