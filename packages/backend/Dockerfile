@@ -35,6 +35,8 @@ COPY . .
 COPY --from=deps /build/lib/contracts/dist ./lib/contracts/dist
 
 WORKDIR /app/packages/backend
+# Generate only Prisma client (skip ERD generator that requires Puppeteer)
+RUN npx prisma generate --generator client
 RUN npm run build
 
 # ---- prod ----
@@ -49,6 +51,9 @@ COPY --from=build /app/packages/backend/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages/backend/prisma ./prisma
 COPY --from=build /app/packages/backend/prisma.config.ts ./prisma.config.ts
+# Copy the generated Prisma client
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 # contracts (file:../../lib/contracts) : nécessaire pour require('contracts')
 COPY --from=build /app/lib/contracts/package.json ./lib/contracts/
 COPY --from=build /app/lib/contracts/dist ./lib/contracts/dist
