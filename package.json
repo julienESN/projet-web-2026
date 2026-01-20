@@ -2,7 +2,7 @@
     "name": "projet-web-2026-root",
     "private": true,
     "workspaces": [
-        "package/*",
+        "packages/*",
         "lib/*"
     ],
     "scripts": {

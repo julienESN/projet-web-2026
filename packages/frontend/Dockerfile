@@ -1,26 +1,40 @@
 FROM node:22-alpine AS base
 WORKDIR /app
 
-# ---- deps (frontend + lib/contracts) ----
+# ---- deps : lock à la racine, install, puis build lib/contracts ----
 FROM base AS deps
 WORKDIR /build
 
-COPY package/frontend/package.json package/frontend/package-lock.json ./package/frontend/
-COPY lib/contracts/package.json lib/contracts/package-lock.json ./lib/contracts/
+# Récupérer le lock à la racine + manifests des workspaces
+COPY package.json package-lock.json ./
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+COPY lib/contracts/ ./lib/contracts/
 
-RUN cd /build/lib/contracts && npm ci
-RUN cd /build/package/frontend && npm ci
+RUN npm ci
+
+# Build lib/contracts (frontend en dépend via file:../../lib/contracts)
+RUN cd lib/contracts && npm run build
 
 # ---- build ----
 FROM base AS build
 WORKDIR /app
 
+# Copier d’abord ce qui impacte npm ci (cache Docker)
+COPY package.json package-lock.json ./
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+COPY lib/contracts/ ./lib/contracts/
+
+RUN npm ci
+
+# Repo complet
 COPY . .
 
-COPY --from=deps /build/lib/contracts/node_modules ./lib/contracts/node_modules
-COPY --from=deps /build/package/frontend/node_modules ./package/frontend/node_modules
+# Réutiliser le build de lib/contracts fait en deps
+COPY --from=deps /build/lib/contracts/dist ./lib/contracts/dist
 
-WORKDIR /app/package/frontend
+WORKDIR /app/packages/frontend
 RUN npm run build
 
 # ---- prod (serve static) ----
@@ -29,9 +43,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=build /app/package/frontend/dist ./dist
+COPY --from=build /app/packages/frontend/dist ./dist
 RUN npm install -g serve
 
 EXPOSE 4173
 CMD ["serve", "-s", "dist", "-l", "4173"]
-
