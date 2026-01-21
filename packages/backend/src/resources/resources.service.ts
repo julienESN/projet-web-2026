@@ -96,7 +96,7 @@ export class ResourcesService {
         title: createResourceDto.title,
         description: createResourceDto.description,
         type: createResourceDto.type,
-        content: createResourceDto.content as Prisma.JsonObject,
+        content: createResourceDto.content as any,
         categoryId: createResourceDto.categoryId,
         tags: createResourceDto.tagIds
           ? {
@@ -141,7 +141,7 @@ export class ResourcesService {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: Prisma.ResourceWhereInput = {
+    const where: any = {
       userId,
       ...(type && { type }),
       ...(categoryId && { categoryId }),
@@ -284,7 +284,7 @@ export class ResourcesService {
       data: {
         title: updateResourceDto.title,
         description: updateResourceDto.description,
-        content: updateResourceDto.content as Prisma.JsonObject,
+        content: updateResourceDto.content as any,
         categoryId: updateResourceDto.categoryId,
         isFavorite: updateResourceDto.isFavorite,
         tags: tagsUpdate,
