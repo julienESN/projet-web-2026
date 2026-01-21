@@ -19,7 +19,11 @@ export function Login() {
       await login(formData);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Échec de la connexion');
+      if (err.status === 401) {
+        setError("Nom d'utilisateur ou mot de passe incorrect.");
+      } else {
+        setError(err.message || 'Une erreur est survenue lors de la connexion.');
+      }
     } finally {
       setLoading(false);
     }

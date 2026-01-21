@@ -19,7 +19,11 @@ export function Register() {
       await register(formData);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || "Échec de l'inscription");
+      if (err.status === 409) {
+        setError("Ce nom d'utilisateur ou cet email est déjà utilisé.");
+      } else {
+        setError(err.message || "Une erreur est survenue lors de l'inscription.");
+      }
     } finally {
       setLoading(false);
     }

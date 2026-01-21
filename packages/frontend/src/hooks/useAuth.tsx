@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // If token exists, try to fetch user
       if (token) {
         try {
-          const profile = await api.get<UserProfile>('/auth/me');
+          const profile = await api.get<UserProfile>('/auth/me', { token });
           setUser(profile);
         } catch (error) {
           console.error('Failed to fetch user profile', error);

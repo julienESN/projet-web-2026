@@ -58,6 +58,6 @@ COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=build /app/lib/contracts/package.json ./lib/contracts/
 COPY --from=build /app/lib/contracts/dist ./lib/contracts/dist
 
-RUN ls -la node_modules && ls -la node_modules/contracts || true
 
-CMD ["node", "dist/main.js"]
+
+CMD ["node", "dist/src/main.js"]
