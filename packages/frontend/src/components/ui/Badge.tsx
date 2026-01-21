@@ -1,11 +1,10 @@
 type BadgeSize = 'sm' | 'md';
 
-export interface BadgeProps {
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
   size?: BadgeSize;
   /** Couleur de fond (CSS ou variable). Ex: var(--color-link), #3B82F6 */
   color?: string;
-  className?: string;
 }
 
 const sizeStyles: Record<BadgeSize, string> = {
@@ -18,9 +17,11 @@ export function Badge({
   size = 'md',
   color,
   className = '',
+  style,
+  ...props
 }: BadgeProps) {
-  const style = color ? { backgroundColor: color, color: '#fff' } : undefined;
-
+  const defaultStyle = color ? { backgroundColor: color, color: '#fff' } : undefined;
+  
   return (
     <span
       className={`
@@ -29,7 +30,8 @@ export function Badge({
         ${sizeStyles[size]}
         ${className}
       `}
-      style={style}
+      style={{ ...defaultStyle, ...style }}
+      {...props}
     >
       {children}
     </span>

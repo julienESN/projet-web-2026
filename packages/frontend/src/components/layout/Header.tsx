@@ -13,7 +13,7 @@ export function Header({ showAuth = true }: HeaderProps) {
   return (
     <header className="sticky top-0 z-10 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-[var(--color-text)]">
+        <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-2 font-semibold text-[var(--color-text)]">
           <span className="text-xl text-[var(--color-primary)]">◇</span>
           Resource Manager
         </Link>

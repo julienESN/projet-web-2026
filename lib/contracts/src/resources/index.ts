@@ -147,8 +147,8 @@ export const ResourceResponseSchema = z.object({
   type: ResourceTypeSchema,
   content: z.record(z.string(), z.unknown()),
   isFavorite: z.boolean(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
   category: z.object({
     id: z.string().uuid(),
     name: z.string(),
