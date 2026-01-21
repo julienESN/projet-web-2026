@@ -1,75 +1,109 @@
 // API Client for Resource Manager
-// Wraps fetch with authentication and error handling
+// Wraps axios with authentication, error handling, and Zod schema validation.
+//
+// Usage Examples:
+//
+// 1. Basic usage with manual type definition:
+//    interface User { id: number; name: string; }
+//    const user = await api.get<User>('/users/1');
+//
+// 2. Usage with Zod schema (Automatic Type Inference):
+//    import { z } from 'zod';
+//    const UserSchema = z.object({ id: z.number(), name: z.string() });
+//    // 'user' is automatically typed as { id: number; name: string; }
+//    const user = await api.get('/users/1', { schema: UserSchema });
+//
+// 3. POST request with Zod schema:
+//    const CreateUserSchema = z.object({ id: z.number(), name: z.string() });
+//    const newUser = await api.post('/users', { name: 'John' }, { schema: CreateUserSchema });
+//
+// 4. Authenticated request:
+//    const data = await api.get('/protected', { token: 'my-token' });
+
+import axios, { type AxiosError, type AxiosResponse } from 'axios';
+import { z, type ZodType } from 'zod';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-interface RequestOptions extends RequestInit {
-    token?: string;
-}
+const client = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 class ApiError extends Error {
-    constructor(
-        public status: number,
-        message: string,
-    ) {
-        super(message);
-        this.name = 'ApiError';
-    }
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+function getHeaders(token?: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 async function request<T>(
-    endpoint: string,
-    options: RequestOptions = {},
+  method: 'get' | 'post' | 'put' | 'delete',
+  endpoint: string,
+  options: { data?: unknown; token?: string; schema?: ZodType<T> } = {},
 ): Promise<T> {
-    const { token, ...fetchOptions } = options;
+  try {
+    const { data, token, schema } = options;
+    const config = { headers: getHeaders(token) };
 
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...options.headers,
-    };
-
-    if (token) {
-        (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...fetchOptions,
-        headers,
+    const response: AxiosResponse<unknown> = await client.request({
+      method,
+      url: endpoint,
+      data,
+      ...config,
     });
 
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new ApiError(response.status, error.message || 'An error occurred');
-    }
-
-    // Handle 204 No Content
     if (response.status === 204) {
-        return {} as T;
+      return {} as T;
     }
 
-    return response.json();
+    if (schema) {
+      return schema.parse(response.data);
+    }
+
+    return response.data as T;
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      console.error('Validation error:', err.issues);
+      throw new ApiError(500, 'Validation Error: Invalid API response format');
+    }
+    const axiosError = err as AxiosError<{ message?: string }>;
+    const status = axiosError.response?.status ?? 500;
+    const message = axiosError.response?.data?.message ?? axiosError.message ?? 'An error occurred';
+    throw new ApiError(status, message);
+  }
 }
 
 export const api = {
-    get: <T>(endpoint: string, token?: string) =>
-        request<T>(endpoint, { method: 'GET', token }),
+  get: <T>(endpoint: string, options: { token?: string; schema?: ZodType<T> } = {}) =>
+    request<T>('get', endpoint, options),
 
-    post: <T>(endpoint: string, data: unknown, token?: string) =>
-        request<T>(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(data),
-            token,
-        }),
+  post: <T>(
+    endpoint: string,
+    data: unknown,
+    options: { token?: string; schema?: ZodType<T> } = {},
+  ) => request<T>('post', endpoint, { data, ...options }),
 
-    put: <T>(endpoint: string, data: unknown, token?: string) =>
-        request<T>(endpoint, {
-            method: 'PUT',
-            body: JSON.stringify(data),
-            token,
-        }),
+  put: <T>(
+    endpoint: string,
+    data: unknown,
+    options: { token?: string; schema?: ZodType<T> } = {},
+  ) => request<T>('put', endpoint, { data, ...options }),
 
-    delete: <T>(endpoint: string, token?: string) =>
-        request<T>(endpoint, { method: 'DELETE', token }),
+  delete: <T>(endpoint: string, options: { token?: string; schema?: ZodType<T> } = {}) =>
+    request<T>('delete', endpoint, options),
 };
 
 export { ApiError };

@@ -13,11 +13,6 @@ build/
 .env.test.local
 .env.production.local
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
 
 # Testing
 coverage/

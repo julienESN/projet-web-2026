@@ -1,1 +1,34 @@
 @import "tailwindcss";
+
+/* Design Tokens - Resource Manager (ui-components.md) */
+:root {
+  /* Primary */
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+
+  /* Types de ressources */
+  --color-link: #3B82F6;
+  --color-document: #EF4444;
+  --color-contact: #F59E0B;
+  --color-event: #8B5CF6;
+  --color-note: #10B981;
+
+  /* Neutres */
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-text: #111827;
+  --color-text-muted: #6B7280;
+
+  /* Feedback */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+}
+
+/* Base */
+html {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-background);
+}
