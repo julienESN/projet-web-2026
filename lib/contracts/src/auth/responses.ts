@@ -20,6 +20,6 @@ export const UserProfileSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   name: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });

@@ -59,4 +59,4 @@ COPY --from=build /app/lib/contracts/package.json ./lib/contracts/
 COPY --from=build /app/lib/contracts/dist ./lib/contracts/dist
 
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]

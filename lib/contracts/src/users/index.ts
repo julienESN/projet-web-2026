@@ -33,4 +33,4 @@ export const UpdateUserDtoSchema = z.object({
 });
 
 // Re-export UserProfile from auth responses
-export { UserProfile, UserProfileSchema } from '../auth/responses';
+export { UserProfile, UserProfileSchema } from '../auth/responses.js';
