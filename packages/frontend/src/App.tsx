@@ -1,18 +1,11 @@
-import { useState } from 'react';
+import { Layout } from './components/layout';
+import { Home } from './pages/Home';
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>count is {count}</button>
-        <p className="text-red-500">
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-    </>
+    <Layout>
+      <Home />
+    </Layout>
   );
 }
 

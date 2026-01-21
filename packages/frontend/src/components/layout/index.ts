@@ -1,6 +1,4 @@
 // Layout Components barrel export
-// Add exports here as components are created
-
-// export { Header } from './Header';
+export { Header } from './Header';
+export { Layout } from './Layout';
 // export { Sidebar } from './Sidebar';
-// export { Layout } from './Layout';
