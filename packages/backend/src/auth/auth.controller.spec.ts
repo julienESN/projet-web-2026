@@ -52,13 +52,13 @@ describe('AuthController', () => {
       expect(mockAuthService.login).toHaveBeenCalledWith(loginDto);
     });
 
-    it('should throw an error for invalid input', () => {
+    it('should throw ZodError for invalid input', async () => {
       const invalidDto = {
-        username: 'te',
-        password: '123',
+        username: 'te', // < 3 characters
+        password: '123', // < 6 characters
       };
 
-      expect(() => controller.login(invalidDto as any)).toThrow();
+      await expect(controller.login(invalidDto as any)).rejects.toThrow();
     });
   });
 
@@ -79,14 +79,14 @@ describe('AuthController', () => {
       expect(mockAuthService.register).toHaveBeenCalledWith(registerDto);
     });
 
-    it('should throw an error for invalid input', () => {
+    it('should throw ZodError for invalid input', async () => {
       const invalidDto = {
-        username: 'te',
-        password: '123',
-        email: 'invalid-email',
+        username: 'te', // < 3 characters
+        password: '123', // < 6 characters
+        email: 'invalid-email', // Invalid email format
       };
 
-      expect(() => controller.register(invalidDto as any)).toThrow();
+      await expect(controller.register(invalidDto as any)).rejects.toThrow();
     });
   });
 
