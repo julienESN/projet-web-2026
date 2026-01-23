@@ -94,9 +94,8 @@ export function Dashboard() {
           if (resource?.type === 'link' && resource.content.url) {
             window.open(resource.content.url as string, '_blank');
           } else {
-             // For other types, maybe alert or navigate to detail? 
-             // Mockup just says "Voir". 
-             alert(`Voir la ressource : ${resource?.title}`);
+             // For other types, navigate to detail
+             navigate(`/resources/${id}`);
           }
         }}
         onEdit={(id) => navigate(`/resources/${id}/edit`)}
