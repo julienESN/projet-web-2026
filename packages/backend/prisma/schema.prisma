@@ -34,6 +34,7 @@ model User {
   categories  Category[]
   tags        Tag[]
   collections Collection[]
+  files       File[]
 
   @@map("users")
 }
@@ -154,4 +155,24 @@ model CollectionResource {
 
   @@id([collectionId, resourceId])
   @@map("collection_resources")
+}
+
+/// Fichiers uploadés par les utilisateurs
+model File {
+  id        String   @id @default(uuid())
+  filename  String   // Nom original du fichier
+  mimeType  String   @map("mime_type") // Type MIME du fichier
+  size      Int      // Taille en octets
+  hash      String   @unique // Hash SHA-256 du contenu (pour éviter les doublons)
+  data      Bytes    // Contenu binaire du fichier
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([hash])
+  @@map("files")
 }

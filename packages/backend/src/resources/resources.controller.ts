@@ -11,7 +11,16 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
+import type { Multer } from 'multer';
 import { ResourcesService } from './resources.service';
 import {
   CreateResourceDto,
@@ -134,5 +143,67 @@ export class ResourcesController {
       id: updated.id,
       isFavorite: updated.isFavorite,
     };
+  }
+
+  /**
+   * POST /resources/upload
+   * Upload a file
+   */
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @GetUser() user: { userId: string },
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB max
+          // Optional: Limit file types
+          // new FileTypeValidator({ fileType: /(jpg|jpeg|png|pdf|doc|docx)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File & { buffer: Buffer },
+  ) {
+    const result = await this.resourcesService.uploadFile(
+      user.userId,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+
+    return result;
+  }
+
+  /**
+   * GET /resources/files/:fileId
+   * Download a file
+   */
+  @Get('files/:fileId')
+  async downloadFile(
+    @Param('fileId') fileId: string,
+    @GetUser() user: { userId: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.resourcesService.getFile(fileId, user.userId);
+
+    res.set({
+      'Content-Type': file.mimeType,
+      'Content-Disposition': `attachment; filename="${file.filename}"`,
+    });
+
+    return new StreamableFile(file.data);
+  }
+
+  /**
+   * DELETE /resources/files/:fileId
+   * Delete a file
+   */
+  @Delete('files/:fileId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteFile(
+    @Param('fileId') fileId: string,
+    @GetUser() user: { userId: string },
+  ) {
+    await this.resourcesService.deleteFile(fileId, user.userId);
   }
 }

@@ -41,10 +41,13 @@ class ApiError extends Error {
   }
 }
 
-function getHeaders(token?: string): Record<string, string> {
+function getHeaders(token?: string, isMultipart: boolean = false): Record<string, string> {
   const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (isMultipart) {
+    headers['Content-Type'] = 'multipart/form-data';
   }
   return headers;
 }
@@ -56,7 +59,8 @@ async function request<T>(
 ): Promise<T> {
   try {
     const { data, token, schema } = options;
-    const config = { headers: getHeaders(token) };
+    const isMultipart = data instanceof FormData;
+    const config = { headers: getHeaders(token, isMultipart) };
 
     const response: AxiosResponse<unknown> = await client.request({
       method,
@@ -104,6 +108,19 @@ export const api = {
 
   delete: <T>(endpoint: string, options: { token?: string; schema?: ZodType<T> } = {}) =>
     request<T>('delete', endpoint, options),
+  upload: <T>(
+    endpoint: string,
+    file: File,
+    options: { token?: string; schema?: ZodType<T> } = {},
+  ) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return request<T>('post', endpoint, {
+      data: formData,
+      ...options,
+    });
+  },
 };
 
 export { ApiError };

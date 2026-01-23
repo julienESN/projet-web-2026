@@ -4,3 +4,4 @@ export * from './users/index.js';
 export * from './categories/index.js';
 export * from './tags/index.js';
 export * from './resources/index.js';
+export * from './files/index.js';
