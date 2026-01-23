@@ -79,6 +79,31 @@ export function useResources() {
     }
   };
 
+  const uploadFile = async (file: File) => {
+    if (!token) throw new Error('Authentication required');
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Response type from backend upload endpoint
+    const FileUploadSchema = z.object({
+      id: z.string(),
+      filename: z.string(),
+      mimeType: z.string(),
+      size: z.number(),
+      hash: z.string(),
+      url: z.string(),
+    });
+
+    try {
+      return await api.post('/resources/upload', formData, { 
+        token, 
+        schema: FileUploadSchema 
+      });
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return {
     resources,
     isLoading,
@@ -87,5 +112,6 @@ export function useResources() {
     createResource,
     updateResource,
     deleteResource,
+    uploadFile,
   };
 }

@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Edit2, 
-  Trash2, 
-  Link as LinkIcon, 
-  FileText, 
-  User, 
-  Calendar, 
-  StickyNote, 
+import {
+  ArrowLeft,
+  Edit2,
+  Trash2,
+  Link as LinkIcon,
+  FileText,
+  User,
+  Calendar,
+  StickyNote,
   ExternalLink,
   Clock,
-  Folder
+  Folder,
+  Download,
 } from 'lucide-react';
 import { Button, Badge, Card, CardBody } from '../components/ui';
 import { api, ApiError } from '../lib/api';
@@ -21,35 +22,35 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const RESOURCE_UI_CONFIG = {
-  link: { 
-    icon: LinkIcon, 
-    label: 'Lien', 
+  link: {
+    icon: LinkIcon,
+    label: 'Lien',
     color: 'var(--color-link)',
-    bgColor: '#3B82F6' // Fallback for header bg
+    bgColor: '#3B82F6', // Fallback for header bg
   },
-  document: { 
-    icon: FileText, 
-    label: 'Document', 
+  document: {
+    icon: FileText,
+    label: 'Document',
     color: 'var(--color-document)',
-    bgColor: '#EF4444'
+    bgColor: '#EF4444',
   },
-  contact: { 
-    icon: User, 
-    label: 'Contact', 
+  contact: {
+    icon: User,
+    label: 'Contact',
     color: 'var(--color-contact)',
-    bgColor: '#F59E0B'
+    bgColor: '#F59E0B',
   },
-  event: { 
-    icon: Calendar, 
-    label: 'Événement', 
+  event: {
+    icon: Calendar,
+    label: 'Événement',
     color: 'var(--color-event)',
-    bgColor: '#8B5CF6'
+    bgColor: '#8B5CF6',
   },
-  note: { 
-    icon: StickyNote, 
-    label: 'Note', 
+  note: {
+    icon: StickyNote,
+    label: 'Note',
     color: 'var(--color-note)',
-    bgColor: '#10B981'
+    bgColor: '#10B981',
   },
 } as const;
 
@@ -62,17 +63,19 @@ export function ResourceDetail() {
   const [resource, setResource] = useState<ResourceResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   useEffect(() => {
     async function fetchResource() {
       if (!id || !token) return;
-      
+
       try {
         setIsLoading(true);
         // Using explicit casting or schema validation
-        const data = await api.get(`/resources/${id}`, { 
+        const data = await api.get(`/resources/${id}`, {
           schema: ResourceResponseSchema,
-          token
+          token,
         });
         setResource(data);
       } catch (err) {
@@ -89,14 +92,102 @@ export function ResourceDetail() {
     fetchResource();
   }, [id, token]);
 
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let isActive = true;
+
+    async function loadPreview() {
+      const content = resource?.content as any;
+      if (!resource || resource.type !== 'document' || !content?.fileId || !token) return;
+
+      const mimeType = content.mimeType || '';
+      // Support basic images and PDF
+      if (!mimeType.startsWith('image/') && mimeType !== 'application/pdf') return;
+
+      try {
+        setIsPreviewLoading(true);
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/resources/files/${content.fileId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        if (!response.ok) throw new Error('Preview load failed');
+
+        const blob = await response.blob();
+        if (isActive) {
+          objectUrl = window.URL.createObjectURL(blob);
+          setPreviewUrl(objectUrl);
+        }
+      } catch (e) {
+        console.error('Failed to load preview', e);
+      } finally {
+        if (isActive) setIsPreviewLoading(false);
+      }
+    }
+
+    if (resource) {
+      loadPreview();
+    }
+
+    return () => {
+      isActive = false;
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [resource, token]);
+
   const handleDelete = async () => {
-    if (!resource || !token || !window.confirm('Êtes-vous sûr de vouloir supprimer cette ressource ?')) return;
+    if (
+      !resource ||
+      !token ||
+      !window.confirm('Êtes-vous sûr de vouloir supprimer cette ressource ?')
+    )
+      return;
 
     try {
       await api.delete(`/resources/${resource.id}`, { token });
       navigate('/dashboard');
     } catch (err) {
-      alert("Erreur lors de la suppression");
+      alert('Erreur lors de la suppression');
+    }
+  };
+
+  const handleDownload = async () => {
+    const content = resource?.content as any;
+    if (!content?.fileId && !content?.filePath) return;
+
+    // Handle legacy mocks or external links
+    if (content.filePath && !content.fileId) {
+      window.open(content.filePath, '_blank');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/resources/files/${content.fileId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) throw new Error('Download failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = content.fileName || 'document';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors du téléchargement');
     }
   };
 
@@ -111,7 +202,9 @@ export function ResourceDetail() {
   if (error || !resource) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
-        <h2 className="text-xl font-bold text-[var(--color-error)] mb-4">{error || 'Ressource introuvable'}</h2>
+        <h2 className="text-xl font-bold text-[var(--color-error)] mb-4">
+          {error || 'Ressource introuvable'}
+        </h2>
         <Link to="/dashboard">
           <Button variant="secondary">Retour au tableau de bord</Button>
         </Link>
@@ -124,8 +217,8 @@ export function ResourceDetail() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <Link 
-        to="/dashboard" 
+      <Link
+        to="/dashboard"
         className="inline-flex items-center gap-2 text-[var(--color-primary)] hover:underline font-medium"
       >
         <ArrowLeft size={16} />
@@ -134,7 +227,7 @@ export function ResourceDetail() {
 
       <Card className="overflow-hidden border-none shadow-lg">
         {/* Header */}
-        <div 
+        <div
           className="p-8 text-white flex justify-between items-start"
           style={{ backgroundColor: uiConfig.bgColor }}
         >
@@ -151,17 +244,17 @@ export function ResourceDetail() {
               <h1 className="text-3xl font-bold">{resource.title}</h1>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="bg-white/20 hover:bg-white/30 border-none text-white"
               onClick={() => navigate(`/resources/${resource.id}/edit`)}
             >
               <Edit2 size={18} />
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="bg-white/20 hover:bg-white/30 border-none text-white"
               onClick={handleDelete}
             >
@@ -177,18 +270,24 @@ export function ResourceDetail() {
             {resource.category && (
               <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
                 <Folder size={18} />
-                <Badge 
+                <Badge
                   color={(resource.category.color as any) || undefined}
-                  style={{ backgroundColor: `${resource.category.color}20`, color: resource.category.color || undefined }}
+                  style={{
+                    backgroundColor: `${resource.category.color}20`,
+                    color: resource.category.color || undefined,
+                  }}
                 >
                   {resource.category.name}
                 </Badge>
               </div>
             )}
-            
+
             <div className="flex flex-wrap gap-2">
-              {resource.tags.map(tag => (
-                <Badge key={tag.id} className="bg-[var(--color-background)] text-[var(--color-primary)]">
+              {resource.tags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  className="bg-[var(--color-background)] text-[var(--color-primary)]"
+                >
                   #{tag.name}
                 </Badge>
               ))}
@@ -208,17 +307,22 @@ export function ResourceDetail() {
           {/* Specific Content */}
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-[var(--color-text)]">
-              {resource.type === 'link' ? 'Lien' : 
-               resource.type === 'note' ? 'Note' : 
-               resource.type === 'contact' ? 'Informations de contact' :
-               resource.type === 'event' ? 'Détails de l\'événement' : 'Document'}
+              {resource.type === 'link'
+                ? 'Lien'
+                : resource.type === 'note'
+                  ? 'Note'
+                  : resource.type === 'contact'
+                    ? 'Informations de contact'
+                    : resource.type === 'event'
+                      ? "Détails de l'événement"
+                      : 'Document'}
             </h3>
-            
+
             <div className="bg-[var(--color-background)] p-4 rounded-lg border border-[var(--color-border)]">
               {resource.type === 'link' && 'url' in (resource.content as any) && (
-                <a 
-                  href={(resource.content as any).url} 
-                  target="_blank" 
+                <a
+                  href={(resource.content as any).url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-[var(--color-primary)] hover:underline break-all"
                 >
@@ -226,19 +330,71 @@ export function ResourceDetail() {
                   {(resource.content as any).url as string}
                 </a>
               )}
-              
+
               {resource.type === 'note' && 'content' in (resource.content as any) && (
                 <p className="whitespace-pre-wrap text-[var(--color-text)]">
                   {(resource.content as any).content}
                 </p>
               )}
 
-              {/* Add other types as needed */}
-              {resource.type !== 'link' && resource.type !== 'note' && (
-                <pre className="text-xs overflow-auto">
-                  {JSON.stringify(resource.content, null, 2)}
-                </pre>
+              {resource.type === 'document' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-4 p-2 bg-[var(--color-surface)] rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg">
+                        <FileText size={24} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-[var(--color-text)]">
+                          {(resource.content as any).fileName || 'Document'}
+                        </p>
+                        <p className="text-sm text-[var(--color-text-muted)]">
+                          {(resource.content as any).mimeType || 'Fichier'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleDownload}
+                      variant="secondary"
+                      className="flex items-center gap-2"
+                    >
+                      <Download size={16} />
+                      Télécharger
+                    </Button>
+                  </div>
+
+                  {isPreviewLoading && (
+                    <div className="flex justify-center p-8 bg-[var(--color-surface)] rounded-lg">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                  )}
+
+                  {previewUrl && (resource.content as any).mimeType?.startsWith('image/') && (
+                    <div className="rounded-lg overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)] flex justify-center p-4">
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="max-h-[600px] object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {previewUrl && (resource.content as any).mimeType === 'application/pdf' && (
+                    <div className="rounded-lg overflow-hidden border border-[var(--color-border)] aspect-[3/4] max-h-[800px]">
+                      <iframe src={previewUrl} className="w-full h-full" title="PDF Preview" />
+                    </div>
+                  )}
+                </div>
               )}
+
+              {/* Add other types as needed */}
+              {resource.type !== 'link' &&
+                resource.type !== 'note' &&
+                resource.type !== 'document' && (
+                  <pre className="text-xs overflow-auto">
+                    {JSON.stringify(resource.content, null, 2)}
+                  </pre>
+                )}
             </div>
           </div>
 
@@ -246,11 +402,16 @@ export function ResourceDetail() {
           <div className="pt-6 border-t border-[var(--color-border)] flex flex-wrap gap-8 text-sm text-[var(--color-text-muted)]">
             <div className="flex items-center gap-2">
               <Clock size={16} />
-              <span>Créé le {format(new Date(resource.createdAt), 'd MMMM yyyy à H:mm', { locale: fr })}</span>
+              <span>
+                Créé le {format(new Date(resource.createdAt), 'd MMMM yyyy à H:mm', { locale: fr })}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Clock size={16} />
-              <span>Modifié le {format(new Date(resource.updatedAt), 'd MMMM yyyy à H:mm', { locale: fr })}</span>
+              <span>
+                Modifié le{' '}
+                {format(new Date(resource.updatedAt), 'd MMMM yyyy à H:mm', { locale: fr })}
+              </span>
             </div>
           </div>
         </CardBody>

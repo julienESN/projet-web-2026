@@ -26,30 +26,31 @@ interface CreateResourceFormProps {
 
 export function CreateResourceForm({ initialData, isEditing = false }: CreateResourceFormProps) {
   const navigate = useNavigate();
-  const { createResource, updateResource } = useResources();
+  const { createResource, updateResource, uploadFile } = useResources();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form State initialized from initialData or defaults
   const [type, setType] = useState<ResourceType>(initialData?.type || 'link');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [category, setCategory] = useState(initialData?.category?.name || '');
-  const [tags, setTags] = useState<string[]>(initialData?.tags.map(t => t.name) || []);
-  
+  const [tags, setTags] = useState<string[]>(initialData?.tags.map((t) => t.name) || []);
+
   // Dynamic Content State
   const [contentFields, setContentFields] = useState<ContentFields>(() => {
     if (!initialData) return {};
     const c = initialData.content as Record<string, string>;
     return {
-       url: c.url,
-       filePath: c.filePath,
-       email: c.email,
-       phone: c.phone,
-       company: c.company,
-       eventDate: c.eventDate, 
-       location: c.location,
-       content: c.content,
+      url: c.url,
+      filePath: c.filePath,
+      email: c.email,
+      phone: c.phone,
+      company: c.company,
+      eventDate: c.eventDate,
+      location: c.location,
+      content: c.content,
     };
   });
 
@@ -61,7 +62,7 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
     try {
       // Build specific content payload based on type
       let contentPayload: Record<string, unknown> = {};
-      
+
       switch (type) {
         case 'link':
           contentPayload = { url: contentFields.url };
@@ -70,24 +71,53 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
           contentPayload = { content: contentFields.content };
           break;
         case 'contact':
-          contentPayload = { 
+          contentPayload = {
             email: contentFields.email,
             phone: contentFields.phone,
-            company: contentFields.company
+            company: contentFields.company,
           };
           break;
         case 'event':
           contentPayload = {
-            eventDate: contentFields.eventDate, 
-            location: contentFields.location
+            eventDate: contentFields.eventDate,
+            location: contentFields.location,
           };
           break;
         case 'document':
-          // Mocking document upload for now as per mockup text input
-          contentPayload = {
-            filePath: contentFields.filePath || 'dummy/path.pdf',
-            mimeType: 'application/pdf' 
+          let docData: Record<string, unknown> = {
+            filePath: contentFields.filePath,
+            mimeType: contentFields.mimeType || 'application/octet-stream',
           };
+
+          if (selectedFile) {
+            const uploaded = await uploadFile(selectedFile);
+            docData = {
+              fileId: uploaded.id,
+              fileName: uploaded.filename,
+              mimeType: uploaded.mimeType,
+              filePath: uploaded.url,
+            };
+          } else if (!isEditing) {
+            // Force file selection for new resources if we don't allow manual path
+            if (!contentFields.filePath) {
+              throw new Error('Veuillez sélectionner un fichier');
+            }
+            // Fallback for manual entry test
+            docData.mimeType = 'application/pdf';
+          } else {
+            // Editing without new file - preserve existing data
+            const c = initialData?.content as any;
+            if (c) {
+              docData = {
+                ...docData,
+                mimeType: c.mimeType,
+                fileId: c.fileId,
+                fileName: c.fileName,
+              };
+            }
+          }
+
+          contentPayload = docData;
           break;
       }
 
@@ -108,9 +138,13 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
       }
 
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Erreur lors de l'enregistrement. Vérifiez les champs obligatoires.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erreur lors de l'enregistrement. Vérifiez les champs obligatoires.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -122,7 +156,7 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
         <h2 className="text-xl font-bold mb-6 text-[var(--color-text)]">
           {isEditing ? 'Modifier la ressource' : 'Nouvelle ressource'}
         </h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="p-4 rounded-lg bg-[var(--color-error)]/10 text-[var(--color-error)] mb-4">
@@ -168,7 +202,7 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
             <h3 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
               Détails {type === 'link' ? 'du lien' : type === 'event' ? "de l'événement" : type}
             </h3>
-            
+
             {type === 'link' && (
               <Input
                 label="URL"
@@ -181,7 +215,9 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
 
             {type === 'note' && (
               <div className="space-y-1">
-                <label className="text-sm font-medium text-[var(--color-text)]">Contenu <span className="text-[var(--color-error)]">*</span></label>
+                <label className="text-sm font-medium text-[var(--color-text)]">
+                  Contenu <span className="text-[var(--color-error)]">*</span>
+                </label>
                 <textarea
                   required
                   className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] min-h-[150px] resize-y focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
@@ -223,7 +259,9 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
                   type="datetime-local"
                   required
                   value={contentFields.eventDate || ''}
-                  onChange={(e) => setContentFields({ ...contentFields, eventDate: e.target.value })}
+                  onChange={(e) =>
+                    setContentFields({ ...contentFields, eventDate: e.target.value })
+                  }
                 />
                 <Input
                   label="Lieu"
@@ -233,15 +271,47 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
                 />
               </>
             )}
-            
-             {type === 'document' && (
-              <Input
-                label="Fichier"
-                disabled // Placeholder for now
-                placeholder="Upload de fichier (Bientôt disponible)"
-                value={contentFields.filePath || ''}
-                onChange={(e) => setContentFields({ ...contentFields, filePath: e.target.value })}
-              />
+
+            {type === 'document' && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-[var(--color-text)]">
+                  Fichier{' '}
+                  {!isEditing && !contentFields.filePath && (
+                    <span className="text-[var(--color-error)]">*</span>
+                  )}
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    className="block w-full text-sm text-[var(--color-text)]
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-lg file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-[var(--color-primary)] file:text-white
+                      hover:file:bg-[var(--color-primary-dark)]
+                      cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setContentFields({
+                          ...contentFields,
+                          filePath: file.name,
+                        });
+                      }
+                    }}
+                  />
+                  {contentFields.filePath && (
+                    <div className="text-sm text-[var(--color-text-muted)]">
+                      {selectedFile ? (
+                        <span>Sélectionné: {selectedFile.name}</span>
+                      ) : (
+                        <span>Fichier actuel: {contentFields.filePath}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
@@ -254,21 +324,14 @@ export function CreateResourceForm({ initialData, isEditing = false }: CreateRes
           />
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-[var(--color-text)]">
-              Tags
-            </label>
+            <label className="block text-sm font-medium text-[var(--color-text)]">Tags</label>
             <TagInput tags={tags} onChange={setTags} />
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-4 pt-4 border-t border-[var(--color-border)]">
-            <Button
-              type="submit"
-              variant="primary"
-              className="flex-1"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Enregistrement...' : (isEditing ? 'Mettre à jour' : 'Créer la ressource')}
+            <Button type="submit" variant="primary" className="flex-1" disabled={isLoading}>
+              {isLoading ? 'Enregistrement...' : isEditing ? 'Mettre à jour' : 'Créer la ressource'}
             </Button>
             <Button
               type="button"

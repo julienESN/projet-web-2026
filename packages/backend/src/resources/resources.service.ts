@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { createHash } from 'crypto';
 import {
   CreateResourceDto,
   UpdateResourceDto,
@@ -316,6 +317,129 @@ export class ResourcesService {
 
     await this.prisma.resource.delete({
       where: { id },
+    });
+  }
+
+  async uploadContentFile(
+    fileBuffer: Buffer,
+    fileName: string,
+  ): Promise<string> {
+    // Placeholder implementation - in real scenario, upload to cloud storage
+    // and return the file URL or identifier.
+    const fakeUrl = `https://filestorage.example.com/${encodeURIComponent(
+      fileName,
+    )}`;
+    return fakeUrl;
+  }
+
+  /**
+   * Upload a file and store it in the database
+   * Computes SHA-256 hash to avoid duplicates
+   */
+  async uploadFile(
+    userId: string,
+    fileBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+  ): Promise<{
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    hash: string;
+    url: string;
+  }> {
+    // Calculate SHA-256 hash of the file content
+    const hash = createHash('sha256').update(fileBuffer).digest('hex');
+
+    // Check if file with same hash already exists for this user
+    const existingFile = await this.prisma.file.findFirst({
+      where: {
+        hash,
+        userId,
+      },
+    });
+
+    // If file already exists, return existing file info
+    if (existingFile) {
+      return {
+        id: existingFile.id,
+        filename: existingFile.filename,
+        mimeType: existingFile.mimeType,
+        size: existingFile.size,
+        hash: existingFile.hash,
+        url: `/api/files/${existingFile.id}`,
+      };
+    }
+
+    // Create new file entry
+    const file = await this.prisma.file.create({
+      data: {
+        userId,
+        filename,
+        mimeType,
+        size: fileBuffer.length,
+        hash,
+        data: fileBuffer as any,
+      },
+    });
+
+    return {
+      id: file.id,
+      filename: file.filename,
+      mimeType: file.mimeType,
+      size: file.size,
+      hash: file.hash,
+      url: `/api/files/${file.id}`,
+    };
+  }
+
+  /**
+   * Get a file by ID
+   */
+  async getFile(
+    fileId: string,
+    userId: string,
+  ): Promise<{
+    filename: string;
+    mimeType: string;
+    data: Buffer;
+  }> {
+    const file = await this.prisma.file.findFirst({
+      where: {
+        id: fileId,
+        userId,
+      },
+    });
+
+    if (!file) {
+      throw new NotFoundException(`File with ID ${fileId} not found`);
+    }
+
+    return {
+      filename: file.filename,
+      mimeType: file.mimeType,
+      data: Buffer.from(file.data),
+    };
+  }
+
+  /**
+   * Delete a file
+   */
+  async deleteFile(fileId: string, userId: string): Promise<void> {
+    const file = await this.prisma.file.findFirst({
+      where: {
+        id: fileId,
+        userId,
+      },
+    });
+
+    if (!file) {
+      throw new NotFoundException(`File with ID ${fileId} not found`);
+    }
+
+    await this.prisma.file.delete({
+      where: { id: fileId },
     });
   }
 }

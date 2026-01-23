@@ -23,7 +23,9 @@ export const LinkContentSchema = z.object({
 });
 
 export const DocumentContentSchema = z.object({
-  filePath: z.string().min(1, 'File path is required'),
+  filePath: z.string().optional(),
+  fileId: z.string().uuid().optional(),
+  fileName: z.string().optional(),
   mimeType: z.string().min(1, 'MIME type is required'),
 });
 
