@@ -1,6 +1,24 @@
 import { Button, Badge, Card, CardBody } from '../components/ui';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Github } from 'lucide-react';
 
 export function Home() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleStart = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const handleGithub = () => {
+    window.open('https://github.com/julienESN/projet-web-2026', '_blank');
+  };
+
   const resourceTypes = [
     { name: 'Liens', color: 'var(--color-link)' },
     { name: 'Documents', color: 'var(--color-document)' },
@@ -12,7 +30,8 @@ export function Home() {
   const features = [
     {
       title: 'Tout centraliser',
-      description: 'Réunissez vos liens, documents, contacts, événements et notes dans un seul espace.',
+      description:
+        'Réunissez vos liens, documents, contacts, événements et notes dans un seul espace.',
     },
     {
       title: 'Organiser simplement',
@@ -46,10 +65,11 @@ export function Home() {
         </div>
 
         <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <Button variant="primary" size="lg">
+          <Button variant="primary" size="lg" onClick={handleStart}>
             Commencer
           </Button>
-          <Button variant="secondary" size="lg">
+          <Button variant="secondary" size="lg" onClick={handleGithub}>
+            <Github className="mr-2 h-5 w-5" />
             En savoir plus
           </Button>
         </div>
