@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowUpDown } from 'lucide-react';
 import type { ResourceType } from 'contracts';
 import { Button } from '../components/ui';
 import { ResourceFilters } from '../components/resources/ResourceFilters';
@@ -8,10 +8,13 @@ import { ResourceStats } from '../components/resources/ResourceStats';
 import { ResourceList } from '../components/resources/ResourceList';
 import { useResources } from '../hooks';
 
+type SortOption = 'date-desc' | 'date-asc' | 'title-asc';
+
 export function Dashboard() {
   const navigate = useNavigate();
   const { resources, isLoading, error, deleteResource } = useResources();
   const [filter, setFilter] = useState<ResourceType | 'all'>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
 
   const counts = useMemo(() => {
     const initialCounts = {
@@ -34,6 +37,21 @@ export function Dashboard() {
     if (filter === 'all') return resources;
     return resources.filter((r) => r.type === filter);
   }, [resources, filter]);
+
+  const sortedResources = useMemo(() => {
+    return [...filteredResources].sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'date-asc':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'title-asc':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+  }, [filteredResources, sortBy]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette ressource ?')) {
@@ -77,30 +95,47 @@ export function Dashboard() {
 
       {/* Filters & Stats */}
       <div className="space-y-6">
-        <ResourceFilters 
-          currentFilter={filter} 
-          onFilterChange={setFilter} 
-          counts={counts} 
-        />
-        
+        <ResourceFilters currentFilter={filter} onFilterChange={setFilter} counts={counts} />
+
         <ResourceStats counts={counts} />
       </div>
 
-      {/* List */}
-      <ResourceList 
-        resources={filteredResources} 
-        onView={(id) => {
-          const resource = resources.find(r => r.id === id);
-          if (resource?.type === 'link' && resource.content.url) {
-            window.open(resource.content.url as string, '_blank');
-          } else {
-             // For other types, navigate to detail
-             navigate(`/resources/${id}`);
-          }
-        }}
-        onEdit={(id) => navigate(`/resources/${id}/edit`)}
-        onDelete={handleDelete}
-      />
+{/* Sorting & List */}
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <div className="relative inline-flex items-center">
+            <ArrowUpDown
+              size={16}
+              className="absolute left-3 text-[var(--color-text-muted)] pointer-events-none"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="appearance-none bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] text-sm rounded-lg focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] block w-full pl-9 p-2.5 outline-none cursor-pointer"
+            >
+              <option value="date-desc">Plus récent</option>
+              <option value="date-asc">Plus ancien</option>
+              <option value="title-asc">Titre (A-Z)</option>
+            </select>
+          </div>
+        </div>
+
+        <ResourceList
+          resources={sortedResources}
+          onView={(id) => {
+            const resource = resources.find((r) => r.id === id);
+            if (resource?.type === 'link' && resource.content.url) {
+              window.open(resource.content.url as string, '_blank');
+            } else {
+              // For other types, maybe alert or navigate to detail?
+              // Mockup just says "Voir".
+              alert(`Voir la ressource : ${resource?.title}`);
+            }
+          }}
+          onEdit={(id) => navigate(`/resources/${id}/edit`)}
+          onDelete={handleDelete}
+        />
+      </div>
     </div>
   );
 }
