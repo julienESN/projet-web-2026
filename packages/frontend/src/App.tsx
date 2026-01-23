@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/layout';
-import { Home, Login, Register, Dashboard, CreateResource, EditResource } from './pages';
+import { Home, Login, Register, Dashboard, CreateResource, EditResource, ResourceDetail } from './pages';
 import { useAuth } from './contexts';
 
 function ProtectedRoute() {
@@ -44,6 +44,14 @@ function App() {
             element={
               <Layout>
                 <CreateResource />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/resources/:id" 
+            element={
+              <Layout>
+                <ResourceDetail />
               </Layout>
             } 
           />

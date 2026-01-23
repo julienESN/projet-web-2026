@@ -76,6 +76,10 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^contracts$": "<rootDir>/../../../lib/contracts/src",
+      "(.+)\\.js": "$1"
+    }
   }
 }

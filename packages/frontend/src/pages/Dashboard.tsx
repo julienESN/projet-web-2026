@@ -100,7 +100,7 @@ export function Dashboard() {
         <ResourceStats counts={counts} />
       </div>
 
-      {/* Sorting & List */}
+{/* Sorting & List */}
       <div className="space-y-4">
         <div className="flex justify-end">
           <div className="relative inline-flex items-center">
