@@ -53,22 +53,26 @@ const RESOURCE_UI_CONFIG = {
   },
 } as const;
 
+import { useAuth } from '../contexts/AuthContext';
+
 export function ResourceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [resource, setResource] = useState<ResourceResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchResource() {
-      if (!id) return;
+      if (!id || !token) return;
       
       try {
         setIsLoading(true);
         // Using explicit casting or schema validation
         const data = await api.get(`/resources/${id}`, { 
-          schema: ResourceResponseSchema 
+          schema: ResourceResponseSchema,
+          token
         });
         setResource(data);
       } catch (err) {
@@ -83,13 +87,13 @@ export function ResourceDetail() {
     }
 
     fetchResource();
-  }, [id]);
+  }, [id, token]);
 
   const handleDelete = async () => {
-    if (!resource || !window.confirm('Êtes-vous sûr de vouloir supprimer cette ressource ?')) return;
+    if (!resource || !token || !window.confirm('Êtes-vous sûr de vouloir supprimer cette ressource ?')) return;
 
     try {
-      await api.delete(`/resources/${resource.id}`);
+      await api.delete(`/resources/${resource.id}`, { token });
       navigate('/dashboard');
     } catch (err) {
       alert("Erreur lors de la suppression");
@@ -174,7 +178,8 @@ export function ResourceDetail() {
               <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
                 <Folder size={18} />
                 <Badge 
-                  style={{ backgroundColor: `${resource.category.color}20`, color: resource.category.color }}
+                  color={(resource.category.color as any) || undefined}
+                  style={{ backgroundColor: `${resource.category.color}20`, color: resource.category.color || undefined }}
                 >
                   {resource.category.name}
                 </Badge>
@@ -218,7 +223,7 @@ export function ResourceDetail() {
                   className="flex items-center gap-2 text-[var(--color-primary)] hover:underline break-all"
                 >
                   <ExternalLink size={18} />
-                  {resource.content.url}
+                  {(resource.content as any).url as string}
                 </a>
               )}
               
