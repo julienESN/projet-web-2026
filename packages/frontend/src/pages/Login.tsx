@@ -9,7 +9,7 @@ export function Login() {
 
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [isAuthenticated, isLoading, navigate]);
 
